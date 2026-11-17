@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- PLACEHOLDER. This is your phone page: replace all of it.
+     It only proves the wiring: the button sends one request through api.js. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake clock</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+    pre { background: #f3f3f3; padding: 8px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Wake clock</h1>
+  <p>Placeholder page. Your settings page goes here.</p>
+  <button id="probe">GET /api/state</button>
+  <pre id="out"></pre>
+  <script type="module">
+    import { api } from './api.js';
+    document.getElementById('probe').onclick = async () => {
+      const res = await api('GET', '/api/state');
+      document.getElementById('out').textContent = res.status + '\n' + res.body;
+    };
+  </script>
+</body>
+</html>

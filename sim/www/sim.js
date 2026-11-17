@@ -124,12 +124,11 @@ $('slider').oninput = (e) => {
   jumpToToday(`${Math.floor(v / 60)}:${v % 60}`);
 };
 document.querySelectorAll('[data-at]').forEach((b) => { b.onclick = () => jumpToToday(b.dataset.at); });
-document.querySelectorAll('[data-speed]').forEach((b) => {
-  b.onclick = () => {
-    speed = +b.dataset.speed;
-    document.querySelectorAll('[data-speed]').forEach((x) => x.classList.toggle('on', x === b));
-  };
-});
+function setSpeed(s) {
+  speed = s;
+  document.querySelectorAll('[data-speed]').forEach((x) => x.classList.toggle('on', +x.dataset.speed === s));
+}
+document.querySelectorAll('[data-speed]').forEach((b) => { b.onclick = () => setSpeed(+b.dataset.speed); });
 // Next DST nights in the EU: last Sunday of March / October.
 function lastSunday(year, month) {
   const d = new Date(Date.UTC(year, month, 0));
@@ -138,15 +137,19 @@ function lastSunday(year, month) {
 $('dst-spring').onclick = () => { const y = localParts(simMs).year + (localParts(simMs).month > 3 ? 1 : 0); jumpTo(y, 3, lastSunday(y, 3), 1, 50); };
 $('dst-autumn').onclick = () => { const y = localParts(simMs).year + (localParts(simMs).month > 10 ? 1 : 0); jumpTo(y, 10, lastSunday(y, 10), 1, 50); };
 
-$('power').onclick = () => {
-  if (sim.isOn()) sim.powerCut(); else { pushTime(); sim.powerOn(); }
+function setPower(on) {
+  if (on && !sim.isOn()) { pushTime(); sim.powerOn(); }
+  if (!on && sim.isOn()) sim.powerCut();
   const off = !sim.isOn();
   $('power').classList.toggle('off', off);
   $('power').textContent = off ? 'Power back on' : 'Power cut';
   updateStatus();
-};
-$('unknown').onchange = (e) => { timeUnknown = e.target.checked; lastShown = ''; };
-$('reset').onclick = () => { sim.storeClear(); persistStore(); sim.powerCut(); pushTime(); sim.powerOn(); updateStatus(); };
+}
+$('power').onclick = () => setPower(!sim.isOn());
+function setTimeUnknown(unknown) { timeUnknown = unknown; $('unknown').checked = unknown; lastShown = ''; }
+$('unknown').onchange = (e) => setTimeUnknown(e.target.checked);
+function wipeStore() { sim.storeClear(); persistStore(); sim.powerCut(); pushTime(); sim.powerOn(); setPower(true); }
+$('reset').onclick = wipeStore;
 $('room').onchange = (e) => viewer.setRoom(e.target.value);
 
 function updateStatus() {
@@ -156,8 +159,31 @@ function updateStatus() {
   ].join(' · ');
 }
 
+// ----- Hooks for the end-to-end tests in e2e/ (the page itself doesn't use them) -----
+// All times are local wall-clock time in TIME_ZONE. Tests usually pause time first.
+window.simTest = {
+  pause() { setSpeed(0); },
+  setSpeed,
+  setTime(year, month, day, hour, minute) { jumpTo(year, month, day, hour, minute); this.tick(); },
+  now() { return localParts(simMs); },
+  advanceMinutes(minutes) { simMs += minutes * 60_000; this.tick(); },
+  tick() { pushTime(); sim.tick(); persistStore(); },
+  // What the core last sent to the LEDs (ignores the test-pattern menu): [[r,g,b], ...]
+  leds() {
+    const b = sim.ledBytes().slice();
+    return Array.from({ length: b.length / 3 }, (_, i) => [b[i * 3], b[i * 3 + 1], b[i * 3 + 2]]);
+  },
+  powerCut() { setPower(false); },
+  powerOn() { setPower(true); this.tick(); },
+  isOn() { return sim.isOn(); },
+  setTimeUnknown(unknown) { setTimeUnknown(unknown); this.tick(); },
+  wipeStore,
+  request(method, path, body = '') { return window.clockSim.request(method, path, body); },
+};
+
 restoreStore();
 pushTime();
 sim.powerOn();
 updateStatus();
 requestAnimationFrame(frame);
+document.documentElement.dataset.simReady = 'true';

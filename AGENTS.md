@@ -56,6 +56,7 @@ Seeed XIAO ESP32-C3, a 12-LED WS2812B ring behind a 3D-printed diffuser, a 74AHC
 | `test/` | Unit tests of `core/`, run on the computer (`pio test -e native`). One folder per suite: `test/test_*/` | Erik |
 | `cad/src/`, `cad/exports/` | Model sources and the STL/3MF exports | Erik |
 | `cad/sim-scene.json` | Which exports the simulator loads, and where the LEDs are (see `cad/README.md`) | Erik |
+| `e2e/tests/` | Browser end-to-end tests (Playwright) of user journeys through the simulator and the phone page | Erik (agents maintain `e2e/tests/helpers.js`, `harness.spec.js` and the config) |
 | `sim/` | Simulator harness: WASM build of `core/` + sim adapters (`sim/src/`), the sim page (`sim/www/`: three.js view, time machine, phone frame) | Agents |
 | `platformio.ini`, `.github/`, `sim/build.sh` | Build and CI | Agents |
 
@@ -81,6 +82,7 @@ TimeSource ──now()──▶ App::tick() ── decides colours from time + s
 | Flash firmware | `pio run -e xiao_esp32c3 -t upload` |
 | Serial monitor | `pio device monitor` |
 | Build simulator | `source <emsdk>/emsdk_env.sh && sim/build.sh` |
+| Browser end-to-end tests (after building the sim) | `cd e2e && npm ci && npx playwright install chromium && npm test` |
 | Run simulator locally | `sim/serve.sh`, then open http://localhost:8000 (or your computer's LAN IP on a phone) |
 
 The simulator needs [emscripten](https://emscripten.org/docs/getting_started/downloads.html) (CI uses 4.0.10) and Node.js (to fetch three.js). On every push to `main`, CI runs the tests, builds the firmware and publishes the simulator to GitHub Pages.
@@ -94,6 +96,14 @@ The simulator needs [emscripten](https://emscripten.org/docs/getting_started/dow
 - Time zone: Europe/Berlin, computed by the browser (`sim/www/timezone.js`). The firmware should use the POSIX TZ `CET-1CEST,M3.5.0,M10.5.0/3`.
 
 ## Testing expectations
+
+Three layers, most tests at the bottom:
+
+1. **Unit tests** (`test/`, `pio test -e native`): pure functions in the core, like the colour decision. Fast; most tests go here.
+2. **Scenario tests** (`test/`, native): the whole `wake::App` with fake time, LEDs and store. Send JSON through `handle()` like the phone does, move the fake clock, call `tick()`, check the LEDs. Whole nights in milliseconds.
+3. **Browser end-to-end tests** (`e2e/tests/`): Playwright drives the built simulator: the real phone page in its frame, the time machine through `window.simTest` (see `sim/www/sim.js`), LED colours read from the core. A handful of journeys only; they're slower and more brittle. `journeys.example.spec.js` shows the shape.
+
+On-device tests (`pio test -e xiao_esp32c3`, board on USB) are possible for adapters but don't run in CI.
 
 - Put the most tests on the colour decision: that's where the old clock's bugs were.
 - Always cover: crossing midnight, both DST nights, power cut across wake time (must be green at power-on), unknown time, overrides expiring, weekday vs weekend.

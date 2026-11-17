@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake clock simulator</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Wake clock simulator</h1>
+    <span id="status" class="status">Loading…</span>
+  </header>
+
+  <main>
+    <section class="clock">
+      <div id="viewer" class="viewer" aria-label="3D view of the clock"></div>
+      <div class="viewer-bar">
+        <label>Room
+          <select id="room">
+            <option value="day">Daylight</option>
+            <option value="evening">Evening lamp</option>
+            <option value="dark" selected>Dark bedroom</option>
+          </select>
+        </label>
+        <label>LEDs from
+          <select id="pattern">
+            <option value="app" selected>Your code</option>
+            <option value="red">Test: all red</option>
+            <option value="orange">Test: all orange</option>
+            <option value="green">Test: all green</option>
+            <option value="chase">Test: one LED going round</option>
+          </select>
+        </label>
+        <div id="ledstrip" class="ledstrip" aria-label="Raw LED values"></div>
+      </div>
+    </section>
+
+    <section class="machine" aria-label="Time machine">
+      <h2>Time machine</h2>
+      <div class="clockface">
+        <div id="simclock" class="simclock">--:--</div>
+        <div id="simdate" class="simdate"></div>
+      </div>
+      <div class="row">
+        <input type="date" id="date">
+        <input type="time" id="time" step="60">
+        <button id="jump">Go</button>
+        <button id="now">Now</button>
+      </div>
+      <div class="row">
+        <input type="range" id="slider" min="0" max="1439" step="1" aria-label="Time of day">
+      </div>
+      <div class="row presets">
+        <button data-at="16:59">16:59</button>
+        <button data-at="19:00">19:00</button>
+        <button data-at="06:29">06:29</button>
+        <button data-at="06:59">06:59</button>
+        <button data-at="09:00">09:00</button>
+      </div>
+      <div class="row speeds" role="group" aria-label="Speed">
+        <button data-speed="0">❚❚</button>
+        <button data-speed="1" class="on">1×</button>
+        <button data-speed="60">60×</button>
+        <button data-speed="600">600×</button>
+        <button data-speed="3600">3600×</button>
+      </div>
+      <div class="row presets">
+        <button id="dst-spring" title="Clocks go 02:00 → 03:00">DST spring night</button>
+        <button id="dst-autumn" title="Clocks go 03:00 → 02:00">DST autumn night</button>
+      </div>
+      <div class="row">
+        <button id="power" class="power">Power cut</button>
+        <label class="check"><input type="checkbox" id="unknown"> Clock doesn't know the time</label>
+      </div>
+      <div class="row">
+        <button id="reset" class="subtle">Wipe stored settings</button>
+      </div>
+    </section>
+
+    <section class="phone" aria-label="Phone">
+      <h2>Phone</h2>
+      <div class="phoneframe">
+        <iframe id="phoneframe" src="phone/index.html" title="Phone page"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="sim.js"></script>
+</body>
+</html>
